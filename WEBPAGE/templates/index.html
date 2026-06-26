@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: #060c14;
+    color: #c8dce8;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid #0d2235;
+    background: #060c14;
+    position: relative;
+    z-index: 1000;
+  }
+
+  .logo { color: #00e5ff; letter-spacing: 3px; font-size: 0.85rem; }
+
+  .hdr-right {
+    display: flex; align-items: center; gap: 16px;
+    font-size: 0.7rem; color: #3a5a6a;
+  }
+
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #ff3b5c;
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  .dot.live { background: #00ff88; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+  #clock { color: #00e5ff; }
+
+  /* LAYOUT */
+  .body {
+    display: flex;
+    height: calc(100vh - 42px);
+  }
+
+  /* MAP WRAPPER */
+  .map-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* THE MAP — must have explicit height */
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* LAYER TOGGLE — sits on top of map */
+  .layer-toggle {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 999;
+    display: flex;
+    gap: 0;
+    border: 1px solid #0d2235;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+
+  .layer-btn {
+    background: rgba(6,12,20,0.92);
+    color: #3a5a6a;
+    border: none;
+    padding: 6px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s, color 0.2s;
+    border-right: 1px solid #0d2235;
+  }
+  .layer-btn:last-child { border-right: none; }
+  .layer-btn.active {
+    background: #00e5ff;
+    color: #060c14;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    border-left: 1px solid #0d2235;
+    display: flex;
+    flex-direction: column;
+    background: #060c14;
+  }
+
+  .section-title {
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    color: #3a5a6a;
+    padding: 9px 16px;
+    border-bottom: 1px solid #0d2235;
+    text-transform: uppercase;
+  }
+
+  .data-rows {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 9px 16px;
+    border-bottom: 1px solid #080f1a;
+  }
+
+  @keyframes rowflash {
+    0%   { background: rgba(0,229,255,0.08); }
+    100% { background: transparent; }
+  }
+  .flash { animation: rowflash 0.5s ease-out; }
+
+  .row-key {
+    font-size: 0.6rem;
+    color: #3a5a6a;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .row-val { font-size: 1rem; color: #00e5ff; }
+  .row-val.green  { color: #00ff88; }
+  .row-val.yellow { color: #ffaa00; }
+  .row-val.red    { color: #ff3b5c; }
+
+  small { font-size: 0.58rem; color: #3a5a6a; }
+
+  /* PREDICTION */
+  .pred-block {
+    border-top: 1px solid #0d2235;
+    padding: 14px 16px;
+    flex-shrink: 0;
+  }
+
+  .pred-label {
+    font-size: 0.58rem;
+    letter-spacing: 2px;
+    color: #3a5a6a;
+    margin-bottom: 4px;
+  }
+
+  .pred-value {
+    font-size: 1.8rem;
+    color: #00ff88;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .pred-value.yellow { color: #ffaa00; }
+  .pred-value.red    { color: #ff3b5c; }
+
+  .pred-sub { font-size: 0.6rem; color: #3a5a6a; }
+
+  .circle-info {
+    margin-top: 6px;
+    font-size: 0.58rem;
+    color: #3a5a6a;
+    line-height: 1.6;
+  }
+  .circle-info span { color: #00e5ff; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GPS // LIVE MONITOR</div>
+  <div class="hdr-right">
+    <div class="dot" id="dot"></div>
+    <span id="conn">WAITING</span>
+    <span>|</span>
+    <span id="clock">--:--:--</span>
+  </div>
+</header>
+
+<div class="body">
+
+  <!-- MAP -->
+  <div class="map-wrap">
+    <div id="map"></div>
+
+    <!-- Layer toggle buttons -->
+    <div class="layer-toggle">
+      <button class="layer-btn active" id="btn-street" onclick="setLayer('street')">STREET</button>
+      <button class="layer-btn" id="btn-sat" onclick="setLayer('satellite')">SATELLITE</button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="section-title">// GPS DATA</div>
+
+    <div class="data-rows">
+      <div class="row" id="r-lat">
+        <span class="row-key">LAT</span>
+        <span class="row-val" id="v-lat">---</span>
+      </div>
+      <div class="row" id="r-lon">
+        <span class="row-key">LON</span>
+        <span class="row-val" id="v-lon">---</span>
+      </div>
+      <div class="row" id="r-speed">
+        <span class="row-key">SPEED</span>
+        <span class="row-val" id="v-speed">--- <small>km/h</small></span>
+      </div>
+      <div class="row" id="r-alt">
+        <span class="row-key">ALTITUDE</span>
+        <span class="row-val" id="v-alt">--- <small>m</small></span>
+      </div>
+      <div class="row" id="r-course">
+        <span class="row-key">COURSE</span>
+        <span class="row-val" id="v-course">--- <small>°</small></span>
+      </div>
+      <div class="row" id="r-sats">
+        <span class="row-key">SATS</span>
+        <span class="row-val" id="v-sats">---</span>
+      </div>
+      <div class="row" id="r-hdop">
+        <span class="row-key">HDOP</span>
+        <span class="row-val" id="v-hdop">---</span>
+      </div>
+      <div class="row" id="r-dist">
+        <span class="row-key">DISTANCE</span>
+        <span class="row-val green" id="v-dist">0.000 <small>km</small></span>
+      </div>
+    </div>
+
+    <div class="pred-block">
+      <div class="pred-label">// PREDICTED GPS ERROR</div>
+      <div class="pred-value" id="v-pred">-.--- m</div>
+      <div class="pred-sub" id="pred-quality">MODEL READY</div>
+      <div class="circle-info">
+        CIRCLE RADIUS: <span id="v-radius">---</span> m<br>
+        AREA: <span id="v-area">---</span> m²
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ---- TILE LAYERS ----
+  const streetLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom: 19, attribution: '© OSM' }
+  );
+
+  const satelliteLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: '© Esri' }
+  );
+
+  // ---- MAP INIT ----
+  const map = L.map('map', {
+    center: [26.47, 73.11],
+    zoom: 16,
+    layers: [streetLayer]   // start with street
+  });
+
+  // Force map to recalculate size after render
+  setTimeout(() => map.invalidateSize(), 100);
+
+  // ---- LAYER SWITCH ----
+  let currentLayer = 'street';
+
+  function setLayer(type) {
+    if (type === currentLayer) return;
+    if (type === 'satellite') {
+      map.removeLayer(streetLayer);
+      map.addLayer(satelliteLayer);
+      document.getElementById('btn-sat').classList.add('active');
+      document.getElementById('btn-street').classList.remove('active');
+    } else {
+      map.removeLayer(satelliteLayer);
+      map.addLayer(streetLayer);
+      document.getElementById('btn-street').classList.add('active');
+      document.getElementById('btn-sat').classList.remove('active');
+    }
+    currentLayer = type;
+  }
+
+  // ---- MAP OBJECTS ----
+  const track = L.polyline([], {
+    color: '#00e5ff', weight: 2, opacity: 0.7
+  }).addTo(map);
+
+  const markerIcon = L.divIcon({
+    className: '',
+    html: `<div style="
+      width:14px;height:14px;
+      background:#00e5ff;
+      border:2px solid #fff;
+      border-radius:50%;
+      box-shadow:0 0 10px #00e5ff, 0 0 20px rgba(0,229,255,0.4);
+    "></div>`,
+    iconSize: [14,14],
+    iconAnchor: [7,7]
+  });
+
+  let marker      = null;
+  let errorCircle = null;
+  let started     = false;
+
+  // ---- DISTANCE TRACKING ----
+  let totalDistKm = 0;
+  let lastLat     = null;
+  let lastLon     = null;
+
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R  = 6371;          // Earth radius km
+    const dL = (lat2 - lat1) * Math.PI / 180;
+    const dO = (lon2 - lon1) * Math.PI / 180;
+    const a  = Math.sin(dL/2) * Math.sin(dL/2) +
+               Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+               Math.sin(dO/2) * Math.sin(dO/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  // ---- CLOCK ----
+  setInterval(() => {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-GB');
+  }, 1000);
+
+  // ---- HELPERS ----
+  function flash(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
+  function hdopColor(v) {
+    if (v <= 1) return 'green';
+    if (v <= 2) return '';
+    if (v <= 5) return 'yellow';
+    return 'red';
+  }
+
+  function predStyle(v) {
+    if (v < 2)  return { cls: '',       label: 'EXCELLENT ACCURACY' };
+    if (v < 5)  return { cls: 'yellow', label: 'MODERATE ERROR' };
+    return        { cls: 'red',    label: 'HIGH ERROR — CHECK SIGNAL' };
+  }
+
+  // ---- MAIN UPDATE ----
+  function update(d) {
+    // First real packet
+    if (!started) {
+      document.getElementById('dot').classList.add('live');
+      document.getElementById('conn').textContent = 'LIVE';
+      started = true;
+    }
+
+    // Sidebar values
+    document.getElementById('v-lat').textContent   = d.lat.toFixed(6);
+    document.getElementById('v-lon').textContent   = d.lon.toFixed(6);
+    document.getElementById('v-speed').innerHTML   = d.speed.toFixed(2) + ' <small>km/h</small>';
+    document.getElementById('v-alt').innerHTML     = Math.round(d.altitude) + ' <small>m</small>';
+    document.getElementById('v-course').innerHTML  = d.course.toFixed(1) + ' <small>°</small>';
+    document.getElementById('v-sats').textContent  = d.sats;
+    document.getElementById('v-hdop').textContent  = d.hdop.toFixed(2);
+
+    document.getElementById('v-hdop').className =
+      'row-val ' + hdopColor(d.hdop);
+    document.getElementById('v-sats').className =
+      'row-val ' + (d.sats >= 8 ? 'green' : d.sats >= 5 ? 'yellow' : 'red');
+
+    // Prediction
+    const pred = d.prediction ?? 0;
+    const ps   = predStyle(pred);
+    document.getElementById('v-pred').textContent       = pred.toFixed(3) + ' m';
+    document.getElementById('v-pred').className         = 'pred-value ' + ps.cls;
+    document.getElementById('pred-quality').textContent = ps.label;
+
+    // Circle info
+    const area = (Math.PI * pred * pred).toFixed(2);
+    document.getElementById('v-radius').textContent = pred.toFixed(3);
+    document.getElementById('v-area').textContent   = area;
+
+    // Flash rows
+    ['r-lat','r-lon','r-speed','r-alt','r-course','r-sats','r-hdop','r-dist'].forEach(flash);
+
+    // ---- DISTANCE ----
+    if (lastLat !== null && lastLon !== null) {
+      const seg = haversine(lastLat, lastLon, d.lat, d.lon);
+      // ignore jumps > 0.5 km in one second (GPS glitch)
+      if (seg < 0.5) totalDistKm += seg;
+    }
+    lastLat = d.lat;
+    lastLon = d.lon;
+
+    // Display: show metres if < 1 km, else km
+    const distDisplay = totalDistKm < 1
+      ? (totalDistKm * 1000).toFixed(1) + ' <small>m</small>'
+      : totalDistKm.toFixed(3) + ' <small>km</small>';
+    document.getElementById('v-dist').innerHTML = distDisplay;
+
+    // ---- MAP UPDATE ----
+    const ll = [d.lat, d.lon];
+
+    // Track polyline
+    track.addLatLng(ll);
+
+    // Marker
+    if (!marker) {
+      marker = L.marker(ll, { icon: markerIcon }).addTo(map);
+      map.setView(ll, 17);
+    } else {
+      marker.setLatLng(ll);
+      map.panTo(ll, { animate: true, duration: 0.5 });
+    }
+
+    // Error circle — radius = predicted error in metres
+    const circleColor = pred < 2 ? '#00ff88' : pred < 5 ? '#ffaa00' : '#ff3b5c';
+
+    if (!errorCircle) {
+      errorCircle = L.circle(ll, {
+        radius:      pred,
+        color:       circleColor,
+        fillColor:   circleColor,
+        fillOpacity: 0.12,
+        weight:      1.5,
+        dashArray:   '4 4'
+      }).addTo(map);
+    } else {
+      errorCircle.setLatLng(ll);
+      errorCircle.setRadius(pred);
+      errorCircle.setStyle({
+        color:     circleColor,
+        fillColor: circleColor
+      });
+    }
+  }
+
+  // ---- POLL /data ----
+  async function poll() {
+    try {
+      const res  = await fetch('/data');
+      const data = await res.json();
+
+      // Accept packet if lat is defined (even if 0)
+      if (data && data.lat !== undefined) update(data);
+
+    } catch(e) {
+      document.getElementById('conn').textContent = 'DISCONNECTED';
+      document.getElementById('dot').classList.remove('live');
+      started = false;
+    }
+    setTimeout(poll, 1000);
+  }
+
+  poll();
+</script>
+</body>
+</html>
