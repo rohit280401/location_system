@@ -50,19 +50,30 @@ The system captures micro-telemetry from a mobile **Hardware Node** (ESP32 via F
 
 ## 📂 Repository Blueprint
 
+```text
+.
+├── ESP_CODE/
+│   └── soldier_monitoring_system.ino      # ESP32 Firmware (FreeRTOS Tasks & Mutex-Guarded GPS Loops)
+│
+├── DATA/
+│   ├── csv_logging.py                     # Logs Telemetry Data from Serial to CSV
+│   └── got_exact_data.py                  # Haversine Distance Calculation & OSRM Road Snapping
+│
+├── MODEL_TRAINING/
+│   └── model.ipynb                        # ML Model Training, Feature Engineering & Evaluation
+│
+├── RPI/
+│   └── rpi.py                             # Edge Gateway (Serial Processing, Kalman Filter & ML Inference)
+│
+├── WEBPAGE/
+│   ├── app.py                             # Flask Web Application
+│   └── templates/
+│       └── index.html                     # Interactive Leaflet.js Tactical Dashboard
+│
+├── gps_error_model.joblib                 # Trained Regression Model
+├── model_features.joblib                  # Saved Feature Configuration
+└── README.md
 ```
-├── soldier_monitoring_system.ino  # ESP32 Firmware Driver (FreeRTOS Tasks & Mutex-guarded GPS loops)
-├── csv_logging.py                 # Field Telemetry Data Logger (Parses and streams serial records to CSV)
-├── got_exact_data.py              # Data Engineering script (Calculates Haversine distance & snaps to OSRM roads)
-├── model.ipynb                    # Production ML Pipeline (Feature selection, scaling, and regressor training)
-├── gps_error_model.joblib         # Serialized Machine Learning model predicting geospatial accuracy bounds
-├── model_features.joblib          # Serialized array of production feature configurations
-├── rpi.py                         # Edge Gateway (Background serial processing, Kalman filtering & ML inference)
-├── app.py                         # Web Application Interface (Bridges edge nodes and translates JSON data objects)
-└── templates/
-    └── index.html                 # Real-time interactive tracking HUD & custom Leaflet map layout
-```
-
 ---
 
 ## 🔋 Low-Power Consumption & Autonomous Resiliency Design
