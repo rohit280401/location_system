@@ -70,8 +70,6 @@ The system captures micro-telemetry from a mobile **Hardware Node** (ESP32 via F
 │   └── templates/
 │       └── index.html                     # Interactive Leaflet.js Tactical Dashboard
 │
-├── gps_error_model.joblib                 # Trained Regression Model
-├── model_features.joblib                  # Saved Feature Configuration
 └── README.md
 ```
 ---
