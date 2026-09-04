@@ -6,30 +6,6 @@ import pandas as pd
 from flask import Flask, jsonify
 import joblib
 
-# ------------------------------------------------
-# Kalman Filter (Real-time)
-# ------------------------------------------------
-def kalman_filter(data, Q=1e-4, R=0.5):
-    n = len(data)
-    x_est = np.zeros(n)
-    P = np.zeros(n)
-
-    x_est[0] = data[0]
-    P[0] = 1
-
-    for k in range(1, n):
-        x_pred = x_est[k-1]
-        P_pred = P[k-1] + Q
-
-        K = P_pred / (P_pred + R)
-        x_est[k] = x_pred + K * (data[k] - x_pred)
-        P[k] = (1 - K) * P_pred
-
-    return x_est
-
-
-
-
 SERIAL_PORT = '/dev/serial0'
 BAUD_RATE = 9600
 
