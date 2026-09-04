@@ -10,7 +10,7 @@ The system captures micro-telemetry from a mobile **Hardware Node** (ESP32 via F
 
 - **Asynchronous Multi-Tasking Edge Firmware:** The hardware transceiver leverages an ESP32 micro-controller configured with FreeRTOS. It separates blocking serial parsing tasks from telemetry broadcasting over mutually exclusive semaphore rings (`gpsMutex`), ensuring deterministic data loops.
 - **Dual-Stage Geospatial Optimization:**
-  - **Stage 1 (Statistical):** Implements a real-time, mathematical **Kalman Filter** directly on the Edge Gateway to dynamically smooth noisy raw latitude/longitude inputs.
+  - **Stage 1 (Statistical):** Implements a real-time, mathematical **Kalman Filter** directly on the Edge Gateway to dynamically smooth noisy raw inputs.
   - **Stage 2 (Predictive):** Leverages an embedded machine learning pipeline trained to predict localized error bounds based on constellation geometries (`HDOP`, `Satellites in view`, `Speed`, and `Altitude`).
 - **State-Driven Command HUD:** A modern web client constructed with a custom sci-fi/tactical visual system. It communicates via an active server polling cycle to render dynamic live track coordinates, calculate path bounding errors, and map real-time precision rings (green, orange, red) corresponding directly to ML deviation metrics.
 - **Auto-Boot Unattended Fault Tolerance:** Fully automated system instantiation through custom `systemd` daemon controls, guaranteeing instantaneous platform initialization on field power recovery.
@@ -91,7 +91,7 @@ Configure the service definition file at `/etc/systemd/system/tactical_gps.servi
 
 ```ini
 [Unit]
-Description=Tactical GPS Gateway & Predictive Analytics Engine
+Description=GPS Gateway
 After=network.target
 
 [Service]
