@@ -6,6 +6,29 @@ import pandas as pd
 from flask import Flask, jsonify
 import joblib
 
+# ------------------------------------------------
+# Kalman Filter
+# ------------------------------------------------
+def kalman_filter(data, Q, R):
+    n = len(data)
+    x_est = np.zeros(n)
+    P = np.zeros(n)
+
+    x_est[0] = data[0]
+    P[0] = 1
+
+    for k in range(1, n):
+        x_pred = x_est[k-1]
+        P_pred = P[k-1] + Q
+
+        K = P_pred / (P_pred + R)
+        x_est[k] = x_pred + K * (data[k] - x_pred)
+        P[k] = (1 - K) * P_pred
+
+    return x_est
+
+
+
 SERIAL_PORT = '/dev/serial0'
 BAUD_RATE = 9600
 
@@ -88,7 +111,7 @@ def read_serial():
 
                 # ---------------- FEATURES ----------------
             feature_dict = {
-                'Speed_kmph_filtered': speed,
+                'Speed_kmph_filtered': kalman_filter(speed,
                 'Altitude_m_filtered': altitude,
                 'Course_deg_filtered': course,
                 'Sats_filtered': sats,
