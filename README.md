@@ -80,7 +80,6 @@ To support field operations where assets rely on limited battery configurations,
 
 ### 1. Telemetry Duty-Cycle Optimization & Compute Mitigation
 
-- **Interval-Based Active LoRa Bursts:** Radio transmission accounts for the highest power consumption on an embedded node. The hardware firmware limits transmission to structured cycles using `vTaskDelay`, moving the peripheral into an idle state between loops to conserve battery.
 - **Deterministic Filtering at the Edge:** Positional computing is split across the topology. The edge node bypasses structural calculation and focuses on low-overhead formatting, shifting mathematical data calculations to the plugged gateway.
 
 ### 2. Auto-Boot Resilience Configuration (systemd Integration)
