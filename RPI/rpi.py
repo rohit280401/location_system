@@ -9,7 +9,7 @@ import joblib
 # ------------------------------------------------
 # Kalman Filter
 # ------------------------------------------------
-def kalman_filter(data, Q, R):
+def kalman_filter(data, Q = 1e-5, R = 1):
     n = len(data)
     x_est = np.zeros(n)
     P = np.zeros(n)
@@ -111,11 +111,11 @@ def read_serial():
 
                 # ---------------- FEATURES ----------------
             feature_dict = {
-                'Speed_kmph_filtered': kalman_filter(speed,
-                'Altitude_m_filtered': altitude,
-                'Course_deg_filtered': course,
-                'Sats_filtered': sats,
-                'HDOPs_filtered': hdop,
+                'Speed_kmph_filtered': kalman_filter(speed),
+                'Altitude_m_filtered': kalman_filter(altitude),
+                'Course_deg_filtered': kalman_filter(course),
+                'Sats_filtered': kalman_filter(sats),
+                'HDOPs_filtered': kalman_filter(hdop),
                 'speed_sat': speed * sats,
                 'altitude_sat_ratio': altitude / (sats + 1),
                 'hdop_sat_ratio': hdop / (sats + 1)
